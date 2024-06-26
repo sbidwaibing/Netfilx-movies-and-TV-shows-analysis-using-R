@@ -1,0 +1,329 @@
+> library(tidyverse) 
+-- Attaching packages ---------------------------------------------------------- tidyverse 1.3.1 --
+v ggplot2 3.3.5     v purrr   0.3.4
+v tibble  3.1.6     v dplyr   1.0.7
+v tidyr   1.1.4     v stringr 1.4.0
+v readr   2.1.1     v forcats 0.5.1
+-- Conflicts ------------------------------------------------------------- tidyverse_conflicts() --
+x dplyr::filter() masks stats::filter()
+x dplyr::lag()    masks stats::lag()
+> library(forcats)
+> library(janeaustenr)
+> library(tidytext)
+> library(reshape2)
+
+Attaching package: ‘reshape2’
+
+The following object is masked from ‘package:tidyr’:
+
+    smiths
+
+> library(lubridate)
+
+Attaching package: ‘lubridate’
+
+The following objects are masked from ‘package:base’:
+
+    date, intersect, setdiff, union
+
+> netflix<-read_csv("C:/Users/sbidw/Documents/BI/EDA NETFLIX/netflix_titles.csv")
+Rows: 7787 Columns: 12                                                                           
+ 0s-- Column specification ---------------------------------------------------------------------------
+Delimiter: ","
+chr (11): show_id, type, title, director, cast, country, date_added, rating, duration, listed_i...
+dbl  (1): release_year
+
+i Use `spec()` to retrieve the full column specification for this data.
+i Specify the column types or set `show_col_types = FALSE` to quiet this message.
+> 
+> 
+> summary(netflix)
+   show_id              type              title             director             cast          
+ Length:7787        Length:7787        Length:7787        Length:7787        Length:7787       
+ Class :character   Class :character   Class :character   Class :character   Class :character  
+ Mode  :character   Mode  :character   Mode  :character   Mode  :character   Mode  :character  
+                                                                                               
+                                                                                               
+                                                                                               
+   country           date_added         release_year     rating            duration        
+ Length:7787        Length:7787        Min.   :1925   Length:7787        Length:7787       
+ Class :character   Class :character   1st Qu.:2013   Class :character   Class :character  
+ Mode  :character   Mode  :character   Median :2017   Mode  :character   Mode  :character  
+                                       Mean   :2014                                        
+                                       3rd Qu.:2018                                        
+                                       Max.   :2021                                        
+  listed_in         description       
+ Length:7787        Length:7787       
+ Class :character   Class :character  
+ Mode  :character   Mode  :character  
+                                      
+                                      
+                                      
+> 
+> netflix%>%
++     group_by(show_id)%>%
++     count()%>%
++     filter(n>1)
+# A tibble: 0 x 2
+# Groups:   show_id [0]
+# ... with 2 variables: show_id <chr>, n <int>
+> 
+> 
+> countries<-netflix%>%
++     select(country, type, title, listed_in)
+> 
+> sum(is.na(countries$country))/nrow(countries)
+[1] 0.06510851
+> countries<-countries%>%
++     filter(!is.na(country))
+> 
+> max(str_count(countries$country, ','))
+[1] 11
+> ctr<-countries%>%
++     separate(country, into = c('a','b','c','d','e','f','g','h','i','j','k','l')
++              ,", ", convert = TRUE)
+Warning message:
+Expected 12 pieces. Missing pieces filled with `NA` in 7279 rows [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, ...]. 
+> 
+> 
+> ctr<-ctr[,1:12]
+> 
+> ctr_list<-ctr%>%
++     unlist()
+> 
+> ctr_tibble<-tibble(
++     country_name=ctr_list
++ )
+> 
+> ctr<-ctr_tibble%>%
++     group_by(country_name)%>%
++     count()%>%
++     filter(!is.na(country_name))
+> 
+> ctr%>%
++     filter(n>100 && country_name != '')%>%
++     ggplot(aes(n, reorder(country_name, FUN=median, n), fill= n>1000))+
++     geom_bar(stat='identity', show.legend = F)+
++     labs(
++         x='Numbers of movies on Netflix',
++         y='Country name',
++         title='US and India make the most movies on Netflix')
+> ctr<-ctr[-1,-2]
+> max(str_count(countries$listed_in, ','))
+[1] 2
+> 
+> List_in<-countries%>%
++     select(listed_in)%>%
++     separate(listed_in, into = c('a','b','c'),", ", convert = TRUE)
+Warning message:
+Expected 3 pieces. Missing pieces filled with `NA` in 4147 rows [2, 3, 5, 7, 8, 9, 11, 17, 19, 22, 23, 24, 25, 26, 28, 29, 30, 33, 34, 35, ...]. 
+> 
+> List_in<-List_in%>%unlist()
+> 
+> list_in<-tibble(
++     list_in=List_in
++ )
+> 
+> list_in%>%
++     group_by(list_in)%>%
++     count()%>%
++     filter(!is.na(list_in) && n>=100)%>%
++     ggplot(aes(n, reorder(list_in, fun=median, n), fill = n>1500))+
++     geom_histogram(stat = 'identity', show.legend = F)+
++     labs(
++         x='Numbers of type in movies on Netflix',
++         y='Types',
++         title='Interational movies and the Dramas are the most movie types on Netflix')
+Warning message:
+Ignoring unknown parameters: binwidth, bins, pad 
+> 
+> 
+> list_in<-list_in%>%
++     group_by(list_in)%>%
++     filter(!is.na(list_in))%>%
++     count()
+> 
+> list_in<-list_in[,-2]
+> 
+> US.movie<-countries[str_which(countries$country, 'United States'), ]
+> max(str_count(US.movie$listed_in, ','))
+[1] 2
+> 
+> US.movie<-US.movie%>%
++     separate(
++         listed_in, into= c('type1', 'type2', 'type3'), ', ', convert = T)
+Warning message:
+Expected 3 pieces. Missing pieces filled with `NA` in 2571 rows [2, 3, 4, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 23, 24, 25, 26, 27, ...]. 
+> 
+> 
+> US.list<-US.movie%>%
++     select(type1, type2, type3)%>%
++     unlist()
+> 
+> US.list<-tibble(
++     type = US.list,
++ )
+> 
+> US.list%>%
++     group_by(type)%>%
++     count()%>%
++     ungroup()%>%
++     filter( !is.na(type))%>%
++     mutate(proportion = n / sum(n))%>%
++     filter( rank(n) >= 32 )%>% #choose top 10 types
++     ggplot(aes('' , n ,fill=type))+
++     geom_histogram( position = 'stack', stat = 'identity', color='white', show.legend = F)+
++     geom_text(aes(label = paste(type,'\n',round(proportion,2))), 
++               position = position_stack(vjust = 0.5), size=2.8)+
++     coord_polar('y', start = 0)+
++     theme_bw()+
++     labs(
++         x='',
++         y='',
++         title='NetFlix: Top 10 movie types in US',
++         subtitle='Dramas amd Comedies are the most types of movies in US'
++     )
+Warning message:
+Ignoring unknown parameters: binwidth, bins, pad 
+> 
+> 
+> India.movie<-countries[str_which(countries$country, 'India'), ]
+> max(str_count(India.movie$listed_in, ','))
+[1] 2
+> 
+> India.movie<-India.movie%>%
++     separate(
++         listed_in, into= c('type1', 'type2', 'type3'), ', ', convert = T)
+Warning message:
+Expected 3 pieces. Missing pieces filled with `NA` in 281 rows [1, 6, 7, 8, 10, 14, 19, 20, 22, 25, 27, 29, 30, 36, 40, 43, 44, 51, 57, 59, ...]. 
+> 
+> India.list<-India.movie%>%
++     select(type1, type2, type3)%>%
++     unlist()
+> 
+> India.list<-tibble(
++     type = India.list
++ )
+> 
+> India.list%>%
++     group_by(type)%>%
++     filter(!is.na(type))%>%
++     count()%>%
++     ungroup()%>%
++     mutate(
++         prop = n/sum(n))%>%
++     filter(rank(prop) > 25)%>%  #Top 10
++     ggplot(aes( '', n, fill=type))+
++     geom_bar(stat = 'identity', position = 'stack', show.legend = F, color='white')+
++     geom_text(aes(x=1.3 , label = paste(type,'\n',round(prop,2))), 
++               position = position_stack(vjust = 0.5), size=2.8)+
++     coord_polar('y', start=0)+
++     theme_bw()+
++     labs(
++         x='',
++         y='',
++         title='NetFlix: Top 10 movie types in India',
++         subtitle='International Movies amd Dramas are the most types of movies in India'
++     )
+> 
+> 
+> movie_words<-netflix%>%
++     select(title, description)%>%
++     unnest_tokens(word, description)%>%  #filter unnessary words
++     filter(! word %in% c('a','the','an','of','by','to',
++                          'and','in','his','her','them',
++                          'we','our','their','us','with',
++                          'is','are','one','on','he','she',
++                          'there','be','as','it','for',
++                          'him','its','no','who','at','that'))%>%
++     group_by(title, word) %>%
++     summarise(n = n())%>%
++     bind_tf_idf(word, title, n)
+`summarise()` has grouped output by 'title'. You can override using the `.groups` argument.
+> 
+> 
+> movie_words_new<-movie_words%>%
++     group_by(title)%>%
++     mutate(quantile = quantile(tf,0.74))%>%
++     filter(tf > quantile)
+> 
+> 
+> movie_words_cor<-movie_words_new%>%
++     group_by(word)%>%
++     spread(key = 'title', value='tf', fill=0)
+> 
+> movie_words_melt<-melt(cor(movie_words_cor[,c(6:ncol(movie_words_cor))]))
+> summary(movie_words_melt)
+                                                                                                                                                       Var1       
+ <U+0627><U+0644><U+0641> <U+0645><U+0628><U+0631><U+0648><U+0643>                                                                                       :   671  
+ <U+0E41><U+0E1C><U+0E19><U+0E23><U+0E49><U+0E32><U+0E22><U+0E19><U+0E32><U+0E22><U+0E40><U+0E08><U+0E49><U+0E32><U+0E40><U+0E25><U+0E48><U+0E2B><U+0E4C>:   671  
+ 100 Things to do Before High School                                                                                                                     :   671  
+ 13 Cameras                                                                                                                                              :   671  
+ 14 Blades                                                                                                                                               :   671  
+ 187                                                                                                                                                     :   671  
+ (Other)                                                                                                                                                 :446215  
+                                                                                                                                                       Var2       
+ <U+0627><U+0644><U+0641> <U+0645><U+0628><U+0631><U+0648><U+0643>                                                                                       :   671  
+ <U+0E41><U+0E1C><U+0E19><U+0E23><U+0E49><U+0E32><U+0E22><U+0E19><U+0E32><U+0E22><U+0E40><U+0E08><U+0E49><U+0E32><U+0E40><U+0E25><U+0E48><U+0E2B><U+0E4C>:   671  
+ 100 Things to do Before High School                                                                                                                     :   671  
+ 13 Cameras                                                                                                                                              :   671  
+ 14 Blades                                                                                                                                               :   671  
+ 187                                                                                                                                                     :   671  
+ (Other)                                                                                                                                                 :446215  
+     value          
+ Min.   :-0.005778  
+ 1st Qu.:-0.001661  
+ Median :-0.001661  
+ Mean   : 0.001125  
+ 3rd Qu.:-0.001661  
+ Max.   : 1.000000  
+                    
+> 
+> 
+> alike_movie<-movie_words_melt%>%
++     filter(value>0.7 & value != 1) 
+> 
+> View(alike_movie)
+> 
+> 
+> alike_movie%>%
++     ggplot(aes(Var1, Var2))+
++     geom_point(aes(color=value), show.legend = F)+
++     geom_text(aes(label=round(value,2)), size=2)+
++     theme( axis.text.x = element_text(angle = 90, vjust=0.5, size=5),
++            axis.text.y = element_text(size=5))+
++     labs(x='',y='')
+> 
+> 
+> netflix<-netflix%>%
++     mutate(date_added = mdy(date_added))
+> 
+> netflix%>%
++     group_by(date_added, type)%>%
++     summarise(n=n())%>%
++     ggplot(aes(date_added))+
++     geom_freqpoly(aes(color=type))+
++     theme_bw()+
++     labs(
++         x='Date',
++         y='Count',
++         title='Count: Movie always more than TV show'
++     )
+`summarise()` has grouped output by 'date_added'. You can override using the `.groups` argument.
+`stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+Warning message:
+Removed 1 rows containing non-finite values (stat_bin). 
+> 
+> netflix%>%
++     group_by(date_added, type)%>%
++     summarise(n=n())%>%
++     ggplot(aes(date_added, color=type))+
++     geom_density(aes(fill=type), alpha=1/10)+
++     theme_bw()+
++     labs(
++         x='Date',
++         y='Proportion',
++         title='Proportion: TV show gains more than Movie in recent year')
+`summarise()` has grouped output by 'date_added'. You can override using the `.groups` argument.
+Warning message:
+Removed 1 rows containing non-finite values (stat_density).
